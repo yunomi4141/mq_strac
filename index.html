@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MQ会計 ストラック表</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'BIZ UDPGothic', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  background: #cfe0f0;
+  color: #1155aa;
+  padding: 24px 16px 48px;
+  min-height: 100vh;
+}
+h1 { text-align: center; font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; color: #1155aa; }
+.subtitle { text-align: center; font-size: 0.63rem; color: #5588bb; margin-bottom: 18px; }
+
+/* ===== ストラック本体 ===== */
+.strak {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+.op { font-size: 1.8rem; color: #1155aa; flex-shrink: 0; line-height: 1; }
+
+/* --- 左ブロック: P縦 | V上/M下 --- */
+.blk-left { display: flex; gap: 4px; align-items: stretch; }
+.col-vm   { display: flex; flex-direction: column; gap: 4px; }
+
+/* --- 右ブロック: 2列グリッド PQ大 | VQ上/MQ下+F/G --- */
+.blk-right    { display: flex; gap: 4px; align-items: stretch; }
+.col-right    { display: flex; flex-direction: column; gap: 4px; }
+.cell-mq-fg  { display: flex; gap: 4px; align-items: stretch; }
+.col-fg      { display: flex; flex-direction: column; gap: 4px; }
+
+/* ===== セル共通 ===== */
+.cell {
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+.sym {
+  font-size: 1rem; font-weight: 800; line-height: 1;
+  margin-bottom: 2px;
+}
+.eq { font-size: 0.55rem; color: rgba(255,255,255,0.7); margin-top: 4px; }
+.eq.dark { color: #88aacc; }
+
+input.cv {
+  width: 100%; border: none; background: transparent;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: inherit; outline: none; padding: 0; margin-top: 1px;
+  -moz-appearance: textfield;
+  min-width: 0;
+}
+input.cv::-webkit-outer-spin-button,
+input.cv::-webkit-inner-spin-button { -webkit-appearance: none; }
+input.cv:focus { border-bottom: 2px solid rgba(255,255,255,0.6); }
+
+/* ===== セル色テーマ ===== */
+/* P: 赤系 */
+.c-p { background: #c8786a; color: #fff; }
+.c-p .sym { color: #fff; }
+.c-p input.cv { color: #fff; }
+.c-p input.cv:focus { border-bottom-color: rgba(255,255,255,0.7); }
+
+/* V: 茶系 */
+.c-v { background: #b09060; color: #fff; }
+.c-v .sym { color: #fff; }
+.c-v input.cv { color: #fff; }
+
+/* M: 青緑系 */
+.c-m { background: #6a9aaa; color: #fff; }
+.c-m .sym { color: #fff; }
+.c-m input.cv { color: #fff; }
+
+/* Q: 青系 */
+.c-q { background: #fff; color: #1155aa; }
+.c-q .sym { color: #1155aa; }
+.c-q input.cv { color: #1155aa; }
+.c-q .eq { color: #88aacc; }
+.c-q input.cv:focus { border-bottom-color: #1155aa; }
+
+/* PQ: 白・大 */
+.c-pq { background: #fff; color: #1155aa; }
+.c-pq .sym { color: #1155aa; }
+.c-pq input.cv { color: #1155aa; font-size: 1.1rem; }
+.c-pq .eq { color: #88aacc; }
+.c-pq input.cv:focus { border-bottom-color: #1155aa; }
+
+/* VQ: 薄茶系 */
+.c-vq { background: #e8dcc8; color: #6a5a30; }
+.c-vq .sym { color: #6a5a30; }
+.c-vq input.cv { color: #6a5a30; }
+.c-vq .eq { color: #a89060; }
+.c-vq input.cv:focus { border-bottom-color: #6a5a30; }
+
+/* MQ: 薄青緑 */
+.c-mq { background: #c8dce0; color: #2a6a7a; }
+.c-mq .sym { color: #2a6a7a; }
+.c-mq input.cv { color: #2a6a7a; }
+.c-mq .eq { color: #5a9aaa; }
+.c-mq input.cv:focus { border-bottom-color: #2a6a7a; }
+
+/* F: 白 */
+.c-f { background: #fff; color: #1155aa; }
+.c-f .sym { color: #1155aa; }
+.c-f input.cv { color: #1155aa; }
+.c-f .eq { color: #88aacc; }
+.c-f input.cv:focus { border-bottom-color: #1155aa; }
+
+/* G: 白（利益正）/ 赤（赤字） */
+.c-g { background: #fff; color: #1155aa; }
+.c-g .sym { color: #1155aa; }
+.c-g input.cv { color: #1155aa; }
+.c-g .eq { color: #88aacc; }
+.c-g input.cv:focus { border-bottom-color: #1155aa; }
+.c-g.loss { background: #ffebee; }
+.c-g.loss .sym { color: #cc2222; }
+.c-g.loss input.cv { color: #cc2222; }
+
+/* サイズ */
+.cell-p  { width: 90px;  min-height: 158px; }
+.cell-v  { width: 120px; min-height: 76px; }
+.cell-m  { width: 120px; min-height: 76px; }
+.cell-q  { width: 110px; min-height: 158px; }
+.cell-pq { width: 140px; min-height: 158px; flex-shrink: 0; }
+.cell-vq { width: 234px; min-height: 74px; flex-shrink: 0; }
+.cell-mq { width: 120px; min-height: 74px; flex-shrink: 0; }
+.cell-f  { width: 110px; min-height: 66px; flex-shrink: 0; }
+.cell-g  { width: 110px; min-height: 66px; flex-shrink: 0; }
+
+/* ===== 損益分岐バー ===== */
+.bep-section {
+  max-width: 620px; margin: 16px auto 0;
+  background: #fff; border-radius: 10px; padding: 12px 14px;
+}
+.bep-title { font-size: 0.62rem; font-weight: 700; color: #5588bb; letter-spacing: .07em; margin-bottom: 8px; }
+.bep-bar-wrap {
+  height: 22px; background: #e0eaf5; border-radius: 6px;
+  overflow: hidden; position: relative;
+}
+.bep-bar-fill {
+  height: 100%; border-radius: 6px 0 0 6px;
+  transition: width .4s ease;
+  display: flex; align-items: center;
+  padding-left: 6px;
+  font-size: 0.58rem; font-weight: 700; color: #fff;
+  white-space: nowrap;
+}
+.bep-marker {
+  position: absolute; top: 0; bottom: 0;
+  width: 2px; background: #cc4444;
+}
+.bep-labels {
+  display: flex; justify-content: space-between;
+  font-size: 0.58rem; color: #5588bb; margin-top: 4px;
+}
+.bep-numbers {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-top: 10px;
+}
+.bep-num { text-align: center; }
+.bep-num-label { font-size: 0.58rem; color: #5588bb; }
+.bep-num-val   { font-size: 0.95rem; font-weight: 700; color: #1155aa; }
+
+/* ===== 下部 ===== */
+.section { max-width: 620px; margin: 10px auto 0; }
+.section-title { font-size: 0.62rem; font-weight: 700; letter-spacing: .07em; color: #5588bb; text-transform: uppercase; margin-bottom: 6px; }
+.calc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.calc-card { background: #fff; border-radius: 8px; padding: 9px 11px; }
+.calc-label { font-size: 0.58rem; color: #5588bb; margin-bottom: 3px; display: block; }
+.calc-val { font-size: 0.95rem; font-weight: 700; color: #1155aa; }
+.calc-eq  { font-size: 0.55rem; color: #88aacc; margin-top: 2px; }
+
+.scen-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 5px; }
+.scen-card { background: #fff; border-radius: 8px; padding: 9px 11px; }
+.scen-label { font-size: 0.58rem; color: #5588bb; margin-bottom: 3px; display: block; }
+.scen-val { font-size: 0.95rem; font-weight: 700; }
+.scen-eq  { font-size: 0.55rem; color: #88aacc; margin-top: 2px; }
+.good { color: #2e7d32; }
+.bad  { color: #cc2222; }
+
+.alert {
+  max-width: 620px; margin: 8px auto 0;
+  background: #ffebee; color: #cc2222;
+  border-radius: 8px; padding: 7px 12px;
+  font-size: 0.72rem; display: none;
+}
+.legend {
+  max-width: 620px; margin: 10px auto 0;
+  background: #fff; border-radius: 8px;
+  padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 5px 14px;
+}
+.legend span { font-size: 0.68rem; color: #1155aa; }
+.legend b { font-weight: 700; }
+.formula {
+  max-width: 620px; margin: 6px auto 0;
+  background: #fff; border-radius: 8px;
+  padding: 8px 14px; text-align: center;
+  font-size: 0.73rem; font-weight: 600; color: #1155aa; line-height: 1.8;
+}
+footer { text-align: center; margin-top: 16px; font-size: 0.58rem; color: #88aacc; }
+</style>
+</head>
+<body>
+
+<h1>MQ会計 ストラック表</h1>
+<p class="subtitle">どのセルも入力可 — 入力したセル以外が自動で逆算されます</p>
+<div style="text-align:center;margin-bottom:14px">
+  <button onclick="resetAll()" style="font-size:0.72rem;padding:5px 16px;border:1px solid #1155aa;border-radius:20px;cursor:pointer;background:transparent;color:#1155aa;font-family:inherit">↺ リセット</button>
+</div>
+
+<div class="strak">
+
+  <!-- 左：P | V/M -->
+  <div class="blk-left">
+    <div class="cell cell-p c-p">
+      <span class="sym">P</span>
+      <input class="cv" type="number" id="P" value="1000" />
+      <span class="eq">売価</span>
+    </div>
+    <div class="col-vm">
+      <div class="cell cell-v c-v">
+        <span class="sym">V</span>
+        <input class="cv" type="number" id="V" value="600" />
+        <span class="eq">変動費</span>
+      </div>
+      <div class="cell cell-m c-m">
+        <span class="sym">M</span>
+        <input class="cv" type="number" id="M" value="400" />
+        <span class="eq">単位粗利 = P−V</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="op">×</div>
+
+  <!-- Q -->
+  <div class="cell cell-q c-q">
+    <span class="sym">Q</span>
+    <input class="cv" type="number" id="Q" value="100" />
+    <span class="eq dark">数量</span>
+  </div>
+
+  <div class="op">=</div>
+
+  <!-- 右：PQ縦長 | VQ上・MQ+F/G下 -->
+  <div class="blk-right">
+    <!-- PQ: 縦いっぱい -->
+    <div class="cell cell-pq c-pq" style="justify-content:center;">
+      <span class="sym">PQ</span>
+      <input class="cv" type="number" id="PQ" value="100000" />
+      <span class="eq dark">売上合計 = P × Q</span>
+    </div>
+    <!-- 右列：VQ上 / MQ+F/G下 -->
+    <div class="col-right">
+      <div class="cell cell-vq c-vq">
+        <span class="sym">VQ</span>
+        <input class="cv" type="number" id="VQ" value="60000" />
+        <span class="eq">変動費合計</span>
+      </div>
+      <div class="cell-mq-fg">
+        <div class="cell cell-mq c-mq">
+          <span class="sym">MQ</span>
+          <input class="cv" type="number" id="MQ" value="40000" />
+          <span class="eq">粗利合計</span>
+        </div>
+        <div class="col-fg">
+          <div class="cell cell-f c-f">
+            <span class="sym">F</span>
+            <input class="cv" type="number" id="F" value="30000" />
+            <span class="eq dark">固定費</span>
+          </div>
+          <div class="cell cell-g c-g" id="cell-G">
+            <span class="sym">G</span>
+            <input class="cv" type="number" id="G" value="10000" />
+            <span class="eq dark">利益 = MQ−F</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /strak -->
+
+<div class="alert" id="alert-box">⚠ 赤字です（MQ &lt; F）。販売数量Qの増加か固定費Fの削減が必要です。</div>
+
+<!-- ===== 損益分岐バー ===== -->
+<div class="bep-section">
+  <div class="bep-title">損益分岐点バー（BEP）</div>
+  <div class="bep-bar-wrap">
+    <div class="bep-bar-fill" id="bep-fill" style="width:0%;background:#4488cc"></div>
+    <div class="bep-marker" id="bep-marker" style="left:50%"></div>
+  </div>
+  <div class="bep-labels">
+    <span>0</span>
+    <span id="bep-label-mid"></span>
+    <span id="bep-label-max"></span>
+  </div>
+  <div class="bep-numbers">
+    <div class="bep-num">
+      <div class="bep-num-label">BEP数量（損益分岐）</div>
+      <div class="bep-num-val" id="r-bep">—</div>
+    </div>
+    <div class="bep-num">
+      <div class="bep-num-label">現在のQ</div>
+      <div class="bep-num-val" id="r-q-now">—</div>
+    </div>
+    <div class="bep-num">
+      <div class="bep-num-label">安全余裕率</div>
+      <div class="bep-num-val" id="r-safety">—</div>
+    </div>
+    <div class="bep-num">
+      <div class="bep-num-label">BEP売上</div>
+      <div class="bep-num-val" id="r-beps">—</div>
+    </div>
+    <div class="bep-num">
+      <div class="bep-num-label">MQ率（粗利率）</div>
+      <div class="bep-num-val" id="r-mrate">—</div>
+    </div>
+    <div class="bep-num">
+      <div class="bep-num-label">利益率</div>
+      <div class="bep-num-val" id="r-grate">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 下部 ===== -->
+<div class="section" style="margin-top:12px">
+  <div class="section-title">販売数量シナリオ</div>
+  <div class="scen-grid">
+    <div class="scen-card"><span class="scen-label">Q −20%</span><div class="scen-val" id="s-dn2">—</div><div class="scen-eq">利益</div></div>
+    <div class="scen-card"><span class="scen-label">Q −10%</span><div class="scen-val" id="s-dn1">—</div><div class="scen-eq">利益</div></div>
+    <div class="scen-card" style="border:2px solid #1155aa"><span class="scen-label">現在のQ</span><div class="scen-val" id="s-now">—</div><div class="scen-eq">利益（現在）</div></div>
+    <div class="scen-card"><span class="scen-label">Q +10%</span><div class="scen-val" id="s-up1">—</div><div class="scen-eq">利益</div></div>
+    <div class="scen-card"><span class="scen-label">Q +20%</span><div class="scen-val" id="s-up2">—</div><div class="scen-eq">利益</div></div>
+    <div class="scen-card">
+      <span class="scen-label">目標利益達成Q</span>
+      <div class="scen-val" id="s-target">—</div>
+      <div class="scen-eq">目標G=<input type="number" id="targetG" value="50000"
+        style="width:60px;border:none;border-bottom:1px solid #88aacc;background:transparent;font-size:0.6rem;color:#1155aa;font-family:inherit;outline:none;-moz-appearance:textfield"
+        oninput="updateDerived()">円</div>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <span><b>P</b> 売価</span>
+  <span><b>V</b> 変動費</span>
+  <span><b>M</b> 単位粗利=P−V</span>
+  <span><b>Q</b> 数量</span>
+  <span><b>MQ</b> 粗利合計=M×Q</span>
+  <span><b>PQ</b> 売上合計=P×Q</span>
+  <span><b>VQ</b> 変動費合計=V×Q</span>
+  <span><b>F</b> 固定費</span>
+  <span><b>G</b> 利益=MQ−F</span>
+</div>
+<div class="formula">
+  企業方程式：PQ = VQ + F + G　|　利益G = MQ − F　|　MQ &gt; F のとき黒字
+</div>
+<footer>MQ会計 ストラック表ツール</footer>
+
+<script>
+const IDS = ['P','V','M','Q','PQ','VQ','MQ','F','G'];
+
+IDS.forEach(id => {
+  document.getElementById(id).addEventListener('input', () => compute(id));
+});
+
+function g(id) { return parseFloat(document.getElementById(id).value); }
+function s(id, v) {
+  const el = document.getElementById(id);
+  if (document.activeElement === el) return;
+  el.value = isFinite(v) ? (Number.isInteger(v) ? v : Math.round(v * 100) / 100) : '';
+}
+function fmt(v)  { return Math.round(v).toLocaleString('ja-JP'); }
+function fmtG(v) { return (v >= 0 ? '' : '−') + fmt(Math.abs(v)); }
+function cls(v)  { return v >= 0 ? 'good' : 'bad'; }
+
+function compute(changed) {
+  let P=g('P'), V=g('V'), M=g('M'), Q=g('Q');
+  let PQ=g('PQ'), VQ=g('VQ'), MQ=g('MQ'), F=g('F'), Gv=g('G');
+
+  /* --- 左側: P, V, M の整合 --- */
+  if (changed === 'P' || changed === 'V') {
+    if (isFinite(P) && isFinite(V)) { M = P - V; s('M', M); }
+  } else if (changed === 'M') {
+    if (isFinite(P) && isFinite(M)) { V = P - M; s('V', V); }
+  }
+
+  /* --- 右側合計セルから逆算 --- */
+  if (changed === 'PQ') {
+    if (isFinite(PQ) && isFinite(Q) && Q !== 0) { P = PQ / Q; s('P', P); V = g('V'); M = P - V; s('M', M); }
+  } else if (changed === 'VQ') {
+    if (isFinite(VQ) && isFinite(Q) && Q !== 0) { V = VQ / Q; s('V', V); P = g('P'); M = P - V; s('M', M); }
+  } else if (changed === 'MQ') {
+    if (isFinite(MQ) && isFinite(Q) && Q !== 0) { M = MQ / Q; s('M', M); P = g('P'); V = P - M; s('V', V); }
+  } else if (changed === 'G') {
+    if (isFinite(F) && isFinite(Gv)) { MQ = F + Gv; s('MQ', MQ); M = isFinite(Q) && Q !== 0 ? MQ / Q : g('M'); s('M', M); P = g('P'); V = P - M; s('V', V); }
+  }
+
+  /* --- 再取得して順方向計算 --- */
+  P=g('P'); V=g('V'); M=g('M'); Q=g('Q'); F=g('F'); Gv=g('G');
+
+  if (changed !== 'PQ') { if (isFinite(P) && isFinite(Q)) { s('PQ', P*Q); } }
+  if (changed !== 'VQ') { if (isFinite(V) && isFinite(Q)) { s('VQ', V*Q); } }
+  if (changed !== 'MQ' && changed !== 'G') { if (isFinite(M) && isFinite(Q)) { s('MQ', M*Q); } }
+  if (changed !== 'G')  {
+    const _MQ = g('MQ');
+    if (isFinite(_MQ) && isFinite(F)) { s('G', _MQ - F); }
+  }
+
+  /* --- 確定値で表示更新 --- */
+  const _P=g('P'), _M=g('M'), _Q=g('Q'), _F=g('F'), _G=g('G'), _PQ=g('PQ'), _MQ=g('MQ');
+  const loss = isFinite(_G) && _G < 0;
+  document.getElementById('cell-G').classList.toggle('loss', loss);
+  document.getElementById('alert-box').style.display = loss ? 'block' : 'none';
+
+  updateDerived(_P, _M, _Q, _F, _PQ, _G, _MQ);
+}
+
+function updateDerived(P, M, Q, F, PQ, G, MQ) {
+  if (!isFinite(P))  P  = g('P');
+  if (!isFinite(M))  M  = g('M');
+  if (!isFinite(Q))  Q  = g('Q');
+  if (!isFinite(F))  F  = g('F');
+  if (!isFinite(PQ)) PQ = g('PQ');
+  if (!isFinite(G))  G  = g('G');
+  if (!isFinite(MQ)) MQ = g('MQ');
+
+  const MQrate = (isFinite(P) && P !== 0) ? M / P * 100 : NaN;
+  const Grate  = (isFinite(PQ) && PQ !== 0) ? G / PQ * 100 : NaN;
+  const BEP    = (isFinite(M) && M !== 0) ? F / M : NaN;
+  const BEPs   = (isFinite(MQrate) && MQrate !== 0) ? F / (MQrate / 100) : NaN;
+  const safety = (isFinite(BEP) && isFinite(Q) && Q !== 0) ? (Q - BEP) / Q * 100 : NaN;
+  const tG     = parseFloat(document.getElementById('targetG').value) || 0;
+  const tQ     = (isFinite(M) && M !== 0) ? Math.ceil((F + tG) / M) : NaN;
+
+  /* BEP バー */
+  const maxQ = isFinite(Q) ? Math.max(Q * 1.3, BEP * 1.3) : 100;
+  const bepPct = isFinite(BEP) ? Math.min(BEP / maxQ * 100, 100) : 0;
+  const qPct   = isFinite(Q)   ? Math.min(Q   / maxQ * 100, 100) : 0;
+  const fill   = document.getElementById('bep-fill');
+  fill.style.width = qPct + '%';
+  fill.style.background = isFinite(G) && G >= 0 ? '#4488cc' : '#cc4444';
+  fill.textContent = isFinite(Q) ? 'Q=' + fmt(Q) : '';
+  document.getElementById('bep-marker').style.left = bepPct + '%';
+  document.getElementById('bep-label-mid').textContent = isFinite(BEP) ? 'BEP ' + fmt(Math.ceil(BEP)) : '';
+  document.getElementById('bep-label-max').textContent = isFinite(maxQ) ? fmt(Math.ceil(maxQ)) : '';
+
+  /* 指標 */
+  document.getElementById('r-bep').textContent    = isFinite(BEP)    ? fmt(Math.ceil(BEP)) + ' 個' : '—';
+  document.getElementById('r-beps').textContent   = isFinite(BEPs)   ? fmt(Math.ceil(BEPs)) + ' 円' : '—';
+  document.getElementById('r-mrate').textContent  = isFinite(MQrate) ? MQrate.toFixed(1) + '%' : '—';
+  document.getElementById('r-grate').textContent  = isFinite(Grate)  ? Grate.toFixed(1)  + '%' : '—';
+  document.getElementById('r-safety').textContent = isFinite(safety) ? safety.toFixed(1) + '%' : '—';
+  document.getElementById('r-q-now').textContent  = isFinite(Q) ? fmt(Q) + ' 個' : '—';
+  document.getElementById('s-target').textContent = isFinite(tQ) ? fmt(tQ) + ' 個' : '—';
+
+  function setScen(id, v) {
+    const el = document.getElementById(id);
+    el.textContent = isFinite(v) ? fmtG(v) : '—';
+    el.className = 'scen-val ' + (isFinite(v) ? cls(v) : '');
+  }
+  setScen('s-dn2', M*Q*0.8 - F);
+  setScen('s-dn1', M*Q*0.9 - F);
+  setScen('s-now', G);
+  setScen('s-up1', M*Q*1.1 - F);
+  setScen('s-up2', M*Q*1.2 - F);
+}
+
+const DEFAULTS = {P:1000, V:600, M:400, Q:100, PQ:100000, VQ:60000, MQ:40000, F:30000, G:10000};
+function resetAll() {
+  IDS.forEach(id => { document.getElementById(id).value = DEFAULTS[id]; });
+  document.getElementById('targetG').value = 50000;
+  compute('P');
+}
+
+compute('P');
+</script>
+</body>
+</html>
