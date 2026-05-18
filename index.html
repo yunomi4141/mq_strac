@@ -153,7 +153,25 @@ h1 { text-align: center; font-size: 1.05rem; font-weight: 700; margin-bottom: 4p
 .field-f  input { background: #6677aa18; color: #334477; border-bottom-color: #6677aa66; }
 .field-g  input { background: #3a9a6a18; color: #1a5a3a; border-bottom-color: #3a9a6a66; }
 
-/* ブロック構造 */
+/* 楕円バッジ — 参考画像のスタイルに合わせる */
+.pct-badge {
+  display: inline-block;
+  background: rgba(255,255,255,0.92);
+  color: #333;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  margin-top: 4px;
+  border: 1.5px solid rgba(255,255,255,0.6);
+  align-self: flex-start;
+}
+/* Fのバッジはやや青みがかった白（参考画像の水色楕円） */
+.pct-badge-sub {
+  background: rgba(200,225,255,0.95);
+  border-color: rgba(150,190,240,0.7);
+  color: #1a3a6a;
+}
 .blk-left   { display: flex; gap: 4px; align-items: stretch; flex-shrink: 0; }
 .col-vm     { display: flex; flex-direction: column; gap: 4px; }
 .blk-right  { display: flex; gap: 4px; align-items: stretch; flex: 1; min-width: 0; }
@@ -345,23 +363,27 @@ footer { text-align:center; margin-top:14px; font-size:0.56rem; color:#888888; }
           <div class="cell cell-vq c-vq">
             <span class="sym">VQ</span>
             <span class="dv" id="d-VQ">60,000</span>
+            <span class="pct-badge" id="b-vq">60.0%</span>
             <span class="eq">変動費合計</span>
           </div>
           <div class="cell-mq-fg">
             <div class="cell cell-mq c-mq">
               <span class="sym">MQ</span>
               <span class="dv" id="d-MQ">40,000</span>
+              <span class="pct-badge" id="b-mq">40.0%</span>
               <span class="eq">粗利合計</span>
             </div>
             <div class="col-fg">
               <div class="cell cell-f c-f">
                 <span class="sym">F</span>
                 <span class="dv" id="d-F">30,000</span>
+                <span class="pct-badge pct-badge-sub" id="b-f">75.0%</span>
                 <span class="eq">固定費</span>
               </div>
               <div class="cell cell-g c-g" id="cell-G">
                 <span class="sym">G</span>
                 <span class="dv" id="d-G">10,000</span>
+                <span class="pct-badge" id="b-g">10.0%</span>
                 <span class="eq">利益</span>
               </div>
             </div>
@@ -523,6 +545,16 @@ function updateDerived(P, M, Q, F, PQ, G, MQ) {
 
   document.getElementById('r-bep').textContent    = isFinite(BEP)    ? fmt(Math.ceil(BEP))+' 個' : '—';
   document.getElementById('r-beps').textContent   = isFinite(BEPs)   ? fmt(Math.ceil(BEPs))+' 円' : '—';
+
+  // 楕円バッジ：VQ・MQ→PQ比率、F→MQ比率、G→PQ比率
+  const bVQ = (isFinite(PQ) && PQ !== 0) ? g('VQ') / PQ * 100 : NaN;
+  const bMQ = (isFinite(PQ) && PQ !== 0) ? MQ / PQ * 100 : NaN;
+  const bF  = (isFinite(MQ) && MQ !== 0) ? F / MQ * 100 : NaN;
+  const bG  = (isFinite(PQ) && PQ !== 0) ? G / PQ * 100 : NaN;
+  document.getElementById('b-vq').textContent = isFinite(bVQ) ? bVQ.toFixed(1)+'%' : '—';
+  document.getElementById('b-mq').textContent = isFinite(bMQ) ? bMQ.toFixed(1)+'%' : '—';
+  document.getElementById('b-f').textContent  = isFinite(bF)  ? bF.toFixed(1)+'%'  : '—';
+  document.getElementById('b-g').textContent  = isFinite(bG)  ? bG.toFixed(1)+'%'  : '—';
   document.getElementById('r-mrate').textContent   = isFinite(MQrate) ? MQrate.toFixed(1)+'%' : '—';
   document.getElementById('r-vrate').textContent   = isFinite(Vrate)  ? Vrate.toFixed(1)+'%'  : '—';
   document.getElementById('r-grate').textContent   = isFinite(Grate)  ? Grate.toFixed(1)+'%'  : '—';
